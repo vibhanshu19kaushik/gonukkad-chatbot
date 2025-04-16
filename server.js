@@ -1,34 +1,33 @@
 import express from "express";
 import cors from "cors";
-import bodyParser from "body-parser";
-import OpenAI from "openai";
+import dotenv from "dotenv";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: 'https://api.openai.com/v1',  // Optional if you're using OpenAI's standard endpoint
-});
-
+dotenv.config();
 const app = express();
+const port = process.env.PORT || 10000;
+
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.post("/chat", async (req, res) => {
-  const userMessage = req.body.message;
-
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo", // or "gpt-3.5-turbo"
-      messages: [{ role: "user", content: userMessage }],
-    });
+    const userMessage = req.body.message;
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-    const reply = response.choices[0].message.content;
-    res.json({ reply });
+    const result = await model.generateContent(userMessage);
+    const response = await result.response;
+    const text = response.text();
+
+    res.json({ reply: text });
   } catch (error) {
     console.error("Error:", error.message);
     res.status(500).json({ reply: "Sorry, something went wrong." });
   }
 });
 
-app.listen(10000, () => {
-  console.log("Chatbot backend running on port 10000");
+app.listen(port, () => {
+  console.log(`Chatbot backend running on port ${port}`);
 });
